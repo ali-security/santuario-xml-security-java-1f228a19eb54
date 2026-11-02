@@ -29,6 +29,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.xml.security.c14n.CanonicalizationException;
 import org.apache.xml.security.c14n.Canonicalizer;
 import org.apache.xml.security.c14n.InvalidCanonicalizerException;
@@ -718,5 +722,51 @@ public class XMLUtils {
 
     public static boolean ignoreLineBreaks() {
         return ignoreLineBreaks;
+    }
+
+    /**
+     * Creates a namespace aware {@link DocumentBuilder} which does not
+     * accept a document type declaration (DTD) in the parsed document.
+     *
+     * @param validating whether the parser validates documents
+     * @return the DocumentBuilder
+     * @throws ParserConfigurationException
+     */
+    public static DocumentBuilder createDocumentBuilder(boolean validating)
+        throws ParserConfigurationException {
+        return createDocumentBuilder(validating, true);
+    }
+
+    /**
+     * Creates a namespace aware {@link DocumentBuilder}.
+     *
+     * @param validating whether the parser validates documents
+     * @param disAllowDocTypeDeclarations if true, any document containing a
+     *    document type declaration (DTD) is rejected by the parser. This
+     *    protects against denial of service attacks which use crafted DTDs.
+     * @return the DocumentBuilder
+     * @throws ParserConfigurationException if the parser cannot be configured,
+     *    for example because it is not able to reject DTDs
+     */
+    public static DocumentBuilder createDocumentBuilder(
+        boolean validating, boolean disAllowDocTypeDeclarations
+    ) throws ParserConfigurationException {
+        DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
+        if (disAllowDocTypeDeclarations) {
+            try {
+                // a Boolean attribute is handed to the parser as a feature
+                dfactory.setAttribute(
+                    "http://apache.org/xml/features/disallow-doctype-decl",
+                    Boolean.TRUE);
+            } catch (IllegalArgumentException ex) {
+                throw new ParserConfigurationException(
+                    "The XML parser does not support disallowing DTDs: "
+                    + ex.getMessage());
+            }
+        }
+        dfactory.setValidating(validating);
+        dfactory.setNamespaceAware(true);
+
+        return dfactory.newDocumentBuilder();
     }
 }

@@ -216,9 +216,9 @@ public final class DOMRetrievalMethod extends DOMStructure
 
 	try {
 	    ApacheData data = (ApacheData) dereference(context);
-	    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-	    dbf.setNamespaceAware(true);
-	    DocumentBuilder db = dbf.newDocumentBuilder();
+	    boolean secVal = Utils.secureValidation(context);
+	    DocumentBuilder db = 
+		org.apache.xml.security.utils.XMLUtils.createDocumentBuilder(false, secVal);
 	    Document doc = db.parse(new ByteArrayInputStream
 		(data.getXMLSignatureInput().getBytes()));
 	    Element kiElem = doc.getDocumentElement();

@@ -105,6 +105,8 @@ public abstract class ApacheCanonicalizer extends TransformService {
 	    }
 	}
 
+	apacheCanonicalizer.setSecureValidation(Utils.secureValidation(xc));
+
 	if (os != null) {
 	    apacheCanonicalizer.setWriter(os);
 	} else {
@@ -189,6 +191,8 @@ public abstract class ApacheCanonicalizer extends TransformService {
                 apacheTransform = Transform.getInstance
                     (ownerDoc, getAlgorithm(), transformElem.getChildNodes());
                 apacheTransform.setElement(transformElem, xc.getBaseURI());
+                boolean secVal = Utils.secureValidation(xc);
+                apacheTransform.setSecureValidation(secVal);
 		if (log.isLoggable(Level.FINE)) {
                     log.log(Level.FINE, "Created transform for algorithm: " 
 		        + getAlgorithm());            
@@ -229,6 +233,9 @@ public abstract class ApacheCanonicalizer extends TransformService {
                 throw new TransformException(ex);
             }
         }
+
+        boolean secVal = Utils.secureValidation(xc);
+        in.setSecureValidation(secVal);
 
         try {
             in = apacheTransform.performTransform(in, os);

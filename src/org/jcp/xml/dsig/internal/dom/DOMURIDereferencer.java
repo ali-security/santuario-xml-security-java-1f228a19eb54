@@ -88,6 +88,7 @@ public class DOMURIDereferencer implements URIDereferencer {
             ResourceResolver apacheResolver = 
 	        ResourceResolver.getInstance(uriAttr, baseURI);
             XMLSignatureInput in = apacheResolver.resolve(uriAttr, baseURI);
+            in.setSecureValidation(Utils.secureValidation(context));
 	    if (in.isOctetStream()) {
 	        return new ApacheOctetStreamData(in);
 	    } else {

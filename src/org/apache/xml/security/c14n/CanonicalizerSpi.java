@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Document;
@@ -61,12 +60,9 @@ public abstract class CanonicalizerSpi {
 
       java.io.ByteArrayInputStream bais = new ByteArrayInputStream(inputBytes);
       InputSource in = new InputSource(bais);
-      DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
 
       // needs to validate for ID attribute nomalization
-      dfactory.setNamespaceAware(true);
-
-      DocumentBuilder db = dfactory.newDocumentBuilder();
+      DocumentBuilder db = XMLUtils.createDocumentBuilder(false, secureValidation);
 
       /*
        * for some of the test vectors from the specification,
@@ -192,4 +188,26 @@ public abstract class CanonicalizerSpi {
    /** Reset the writter after a c14n */
    protected boolean reset=false;
    //J+
+
+   /** If true, parsed XML data must not contain a document type declaration */
+   protected boolean secureValidation;
+
+   /**
+    * Returns whether secure validation is enabled.
+    *
+    * @return true if secure validation is enabled
+    */
+   public boolean isSecureValidation() {
+      return secureValidation;
+   }
+
+   /**
+    * Enables or disables secure validation. If enabled, XML data parsed by
+    * this canonicalizer must not contain a document type declaration (DTD).
+    *
+    * @param secureValidation true to enable secure validation
+    */
+   public void setSecureValidation(boolean secureValidation) {
+      this.secureValidation = secureValidation;
+   }
 }

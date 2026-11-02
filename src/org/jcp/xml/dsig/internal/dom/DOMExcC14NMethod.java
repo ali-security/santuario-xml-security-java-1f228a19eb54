@@ -137,6 +137,8 @@ public final class DOMExcC14NMethod extends ApacheCanonicalizer {
 		try {
                     apacheCanonicalizer = Canonicalizer.getInstance
 			(CanonicalizationMethod.EXCLUSIVE);
+                    boolean secVal = Utils.secureValidation(xc);
+                    apacheCanonicalizer.setSecureValidation(secVal);
 		} catch (InvalidCanonicalizerException ice) {
 		    throw new TransformException
 			("Couldn't find Canonicalizer for: " +

@@ -84,6 +84,7 @@ public class TransformC14NExclusive extends TransformSpi {
 
          Canonicalizer20010315ExclOmitComments c14n =
             new Canonicalizer20010315ExclOmitComments();
+         c14n.setSecureValidation(input.isSecureValidation());
          if (os!=null) {
             c14n.setWriter(os);
          }
@@ -91,6 +92,7 @@ public class TransformC14NExclusive extends TransformSpi {
          result =c14n.engineCanonicalize(input, inclusiveNamespaces);
               
          XMLSignatureInput output=new XMLSignatureInput(result);
+         output.setSecureValidation(input.isSecureValidation());
          if (os!=null) {
             output.setOutputStream(os);
          }

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -39,6 +40,7 @@ import org.apache.xml.security.transforms.TransformationException;
 import org.apache.xml.security.transforms.Transforms;
 import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 
 /**
  * Class TransformXSLT
@@ -126,8 +128,15 @@ public class TransformXSLT extends TransformSpi {
           * attempt to convert it to octets (apply Canonical XML]) as described
           * in the Reference Processing Model (section 4.3.3.2).
           */
-         Source xmlSource =
-            new StreamSource(new ByteArrayInputStream(input.getBytes()));
+         Source xmlSource;
+         if (input.isSecureValidation()) {
+            // the data to be transformed must not contain a DTD
+            xmlSource = new DOMSource(XMLUtils.createDocumentBuilder(false, true)
+               .parse(new ByteArrayInputStream(input.getBytes())));
+         } else {
+            xmlSource =
+               new StreamSource(new ByteArrayInputStream(input.getBytes()));
+         }
          Source stylesheet;
 
          /*
@@ -169,12 +178,15 @@ public class TransformXSLT extends TransformSpi {
             ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
             StreamResult outputTarget = new StreamResult(baos1);
             transformer.transform(xmlSource, outputTarget);
-            return new XMLSignatureInput(baos1.toByteArray());
+            XMLSignatureInput output=new XMLSignatureInput(baos1.toByteArray());
+            output.setSecureValidation(input.isSecureValidation());
+            return output;
          }
          StreamResult outputTarget = new StreamResult(baos);
 
          transformer.transform(xmlSource, outputTarget);         
          XMLSignatureInput output=new XMLSignatureInput((byte[])null);
+         output.setSecureValidation(input.isSecureValidation());
          output.setOutputStream(baos);
          return output;
       } catch (XMLSecurityException ex) {
@@ -198,6 +210,14 @@ public class TransformXSLT extends TransformSpi {
 
          throw new TransformationException("generic.EmptyMessage", exArgs, ex);
       } catch (java.lang.reflect.InvocationTargetException ex) {
+         Object exArgs[] = { ex.getMessage() };
+
+         throw new TransformationException("generic.EmptyMessage", exArgs, ex);
+      } catch (ParserConfigurationException ex) {
+         Object exArgs[] = { ex.getMessage() };
+
+         throw new TransformationException("generic.EmptyMessage", exArgs, ex);
+      } catch (SAXException ex) {
          Object exArgs[] = { ex.getMessage() };
 
          throw new TransformationException("generic.EmptyMessage", exArgs, ex);

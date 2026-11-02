@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.xml.security.c14n.CanonicalizationException;
@@ -89,6 +88,12 @@ public class XMLSignatureInput implements Cloneable {
      * A cached bytes
      */
     byte []bytes=null;
+
+    /**
+     * If true, the octets must not contain a document type declaration (DTD)
+     * when they are parsed into nodes.
+     */
+    private boolean secureValidation;
 
     /**
      * Some Transforms may require explicit MIME type, charset (IANA registered "character set"), or other such information concerning the data they are receiving from an earlier Transform or the source data, although no Transform algorithm specified in this document needs such explicit information. Such data characteristics are provided as parameters to the Transform algorithm and should be described in the specification for the algorithm.
@@ -594,10 +599,8 @@ public class XMLSignatureInput implements Cloneable {
 	
     void convertToNodes() throws CanonicalizationException, 
 	ParserConfigurationException, IOException, SAXException {
-	DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
-        dfactory.setValidating(false);        
-        dfactory.setNamespaceAware(true);
-        DocumentBuilder db = dfactory.newDocumentBuilder();
+        DocumentBuilder db = 
+            XMLUtils.createDocumentBuilder(false, secureValidation);
         // select all nodes, also the comments.        
         try {
             db.setErrorHandler(new org.apache.xml.security.utils
@@ -621,5 +624,25 @@ public class XMLSignatureInput implements Cloneable {
         }
         this._inputOctetStreamProxy=null;
         this.bytes=null;
+    }
+
+    /**
+     * Returns whether secure validation is enabled for this input.
+     *
+     * @return true if secure validation is enabled
+     */
+    public boolean isSecureValidation() {
+        return secureValidation;
+    }
+
+    /**
+     * Enables or disables secure validation for this input. If enabled, the
+     * octets of this input must not contain a document type declaration (DTD)
+     * when they are parsed into nodes.
+     *
+     * @param secureValidation true to enable secure validation
+     */
+    public void setSecureValidation(boolean secureValidation) {
+        this.secureValidation = secureValidation;
     }
 }

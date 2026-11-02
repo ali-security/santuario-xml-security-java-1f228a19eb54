@@ -115,6 +115,8 @@ public abstract class ApacheTransform extends TransformService {
                 apacheTransform = Transform.getInstance
 		    (ownerDoc, getAlgorithm(), transformElem.getChildNodes());
 		apacheTransform.setElement(transformElem, xc.getBaseURI());
+                boolean secVal = Utils.secureValidation(xc);
+                apacheTransform.setSecureValidation(secVal);
 		if (log.isLoggable(Level.FINE)) {
                     log.log(Level.FINE, "Created transform for algorithm: " 
 		        + getAlgorithm());
@@ -158,6 +160,8 @@ public abstract class ApacheTransform extends TransformService {
                 throw new TransformException(ex);
             }
         }
+        boolean secVal = Utils.secureValidation(xc);
+        in.setSecureValidation(secVal);
 
 	try {
 	    if (os != null) {

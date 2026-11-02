@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.*;
+import javax.xml.crypto.XMLCryptoContext;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
@@ -99,5 +100,25 @@ public final class Utils {
      */
     public static boolean sameDocumentURI(String uri) {
 	return (uri != null && (uri.length() == 0 || uri.charAt(0) == '#'));
+    }
+
+    /**
+     * Returns true if secure validation is enabled on the specified context,
+     * i.e. if the <code>org.apache.jcp.xml.dsig.secureValidation</code> (or 
+     * <code>org.jcp.xml.dsig.secureValidation</code>) property is set to
+     * <code>Boolean.TRUE</code>. If enabled, XML data parsed while processing
+     * the signature must not contain a document type declaration (DTD).
+     */
+    static boolean secureValidation(XMLCryptoContext xc) {
+        if (xc == null) {
+            return false;
+        }
+        return getBoolean(xc, "org.apache.jcp.xml.dsig.secureValidation")
+            || getBoolean(xc, "org.jcp.xml.dsig.secureValidation");
+    }
+
+    private static boolean getBoolean(XMLCryptoContext xc, String name) {
+        Object value = xc.getProperty(name);
+        return (value instanceof Boolean && ((Boolean) value).booleanValue());
     }
 }

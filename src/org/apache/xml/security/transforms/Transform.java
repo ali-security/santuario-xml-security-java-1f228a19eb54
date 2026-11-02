@@ -65,6 +65,7 @@ public final class Transform extends SignatureElementProxy {
     private static HashMap transformSpiHash = new HashMap();	      
 
     private TransformSpi transformSpi = null;
+    private boolean secureValidation;
 
     /**
      * Constructs {@link Transform}
@@ -276,6 +277,9 @@ public final class Transform extends SignatureElementProxy {
         XMLSignatureInput result = null;
 
         try {
+            if (secureValidation) {
+                input.setSecureValidation(true);
+            }
             result = transformSpi.enginePerformTransform(input, this);
         } catch (ParserConfigurationException ex) {
             Object exArgs[] = { this.getURI(), "ParserConfigurationException" };
@@ -310,6 +314,9 @@ public final class Transform extends SignatureElementProxy {
         XMLSignatureInput result = null;
 
         try {
+            if (secureValidation) {
+                input.setSecureValidation(true);
+            }
        	    result = transformSpi.enginePerformTransform(input, os, this);
         } catch (ParserConfigurationException ex) {
        	    Object exArgs[] = { this.getURI(), "ParserConfigurationException" };
@@ -332,6 +339,27 @@ public final class Transform extends SignatureElementProxy {
      */
     private static Class getImplementingClass(String URI) {
         return (Class) transformClassHash.get(URI);
+    }
+
+    /**
+     * Returns whether secure validation is enabled for this transform.
+     *
+     * @return true if secure validation is enabled
+     */
+    public boolean isSecureValidation() {
+        return secureValidation;
+    }
+
+    /**
+     * Enables or disables secure validation for this transform. If enabled,
+     * the input of the transform is marked for secure validation, so that 
+     * XML data parsed while applying this and the following transforms must
+     * not contain a document type declaration (DTD).
+     *
+     * @param secureValidation true to enable secure validation
+     */
+    public void setSecureValidation(boolean secureValidation) {
+        this.secureValidation = secureValidation;
     }
 
     private static TransformSpi getTransformSpi(String URI) 

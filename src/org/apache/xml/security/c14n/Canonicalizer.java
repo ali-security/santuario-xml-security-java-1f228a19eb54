@@ -23,9 +23,9 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.xml.security.exceptions.AlgorithmAlreadyRegisteredException;
+import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -82,6 +82,7 @@ public class Canonicalizer {
     static Map _canonicalizerHash = null;
 
     protected CanonicalizerSpi canonicalizerSpi = null;
+    private boolean secureValidation;
 
     /**
      * Method init
@@ -197,14 +198,9 @@ public class Canonicalizer {
 
         ByteArrayInputStream bais = new ByteArrayInputStream(inputBytes);
         InputSource in = new InputSource(bais);
-        DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
-
-        dfactory.setNamespaceAware(true);
 
         // needs to validate for ID attribute nomalization
-        dfactory.setValidating(true);
-
-        DocumentBuilder db = dfactory.newDocumentBuilder();
+        DocumentBuilder db = XMLUtils.createDocumentBuilder(true, secureValidation);
 
         /*
          * for some of the test vectors from the specification,
@@ -247,6 +243,7 @@ public class Canonicalizer {
      */
     public byte[] canonicalizeSubtree(Node node)
            throws CanonicalizationException {
+        this.canonicalizerSpi.secureValidation = secureValidation;
         return this.canonicalizerSpi.engineCanonicalizeSubTree(node);
     }
 
@@ -260,6 +257,7 @@ public class Canonicalizer {
      */
     public byte[] canonicalizeSubtree(Node node, String inclusiveNamespaces)
            throws CanonicalizationException {
+        this.canonicalizerSpi.secureValidation = secureValidation;
         return this.canonicalizerSpi.engineCanonicalizeSubTree(node,
               inclusiveNamespaces);
     }
@@ -274,6 +272,7 @@ public class Canonicalizer {
      */
     public byte[] canonicalizeXPathNodeSet(NodeList xpathNodeSet)
            throws CanonicalizationException {
+        this.canonicalizerSpi.secureValidation = secureValidation;
         return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet);
     }
 
@@ -289,6 +288,7 @@ public class Canonicalizer {
     public byte[] canonicalizeXPathNodeSet(
            NodeList xpathNodeSet, String inclusiveNamespaces)
               throws CanonicalizationException {
+        this.canonicalizerSpi.secureValidation = secureValidation;
         return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet,
               inclusiveNamespaces);
     } 
@@ -302,6 +302,7 @@ public class Canonicalizer {
      */
     public byte[] canonicalizeXPathNodeSet(Set xpathNodeSet)
            throws CanonicalizationException {
+        this.canonicalizerSpi.secureValidation = secureValidation;
         return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet);
     }
 
@@ -315,6 +316,7 @@ public class Canonicalizer {
      */
     public byte[] canonicalizeXPathNodeSet(Set xpathNodeSet, 
 	String inclusiveNamespaces) throws CanonicalizationException {
+        this.canonicalizerSpi.secureValidation = secureValidation;
         return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet,
             inclusiveNamespaces);
     }
@@ -352,5 +354,26 @@ public class Canonicalizer {
      */
     public void notReset() {
         this.canonicalizerSpi.reset = false;
+    }
+
+    /**
+     * Returns whether secure validation is enabled. If enabled, XML data
+     * parsed by this canonicalizer must not contain a document type
+     * declaration (DTD).
+     *
+     * @return true if secure validation is enabled
+     */
+    public boolean isSecureValidation() {
+        return secureValidation;
+    }
+
+    /**
+     * Enables or disables secure validation. If enabled, XML data parsed by
+     * this canonicalizer must not contain a document type declaration (DTD).
+     *
+     * @param secureValidation true to enable secure validation
+     */
+    public void setSecureValidation(boolean secureValidation) {
+        this.secureValidation = secureValidation;
     }
 }

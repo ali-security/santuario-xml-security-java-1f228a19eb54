@@ -269,6 +269,25 @@ public final class XMLSignature extends SignatureElementProxy {
      */
     public XMLSignature(Element element, String BaseURI)
         throws XMLSignatureException, XMLSecurityException {
+        this(element, BaseURI, false);
+    }
+
+    /**
+     * This will parse the element and construct the Java Objects.
+     * That will allow a user to validate the signature.
+     *
+     * @param element ds:Signature element that contains the whole signature
+     * @param BaseURI URI to be prepended to all relative URIs
+     * @param secureValidation whether secure validation is enabled or not. If
+     * enabled, XML data parsed while processing the signature (for example 
+     * while applying transforms) must not contain a document type 
+     * declaration (DTD).
+     * @throws XMLSecurityException
+     * @throws XMLSignatureException if the signature is badly formatted
+     */
+    public XMLSignature(Element element, String BaseURI, 
+        boolean secureValidation)
+        throws XMLSignatureException, XMLSecurityException {
 
         super(element, BaseURI);
 
@@ -284,7 +303,8 @@ public final class XMLSignature extends SignatureElementProxy {
         }
 
         // create a SignedInfo object from that element
-        this._signedInfo = new SignedInfo(signedInfoElem, BaseURI);
+        this._signedInfo = 
+            new SignedInfo(signedInfoElem, BaseURI, secureValidation);
 	// get signedInfoElem again in case it has changed
         signedInfoElem = XMLUtils.getNextElement(element.getFirstChild());
 

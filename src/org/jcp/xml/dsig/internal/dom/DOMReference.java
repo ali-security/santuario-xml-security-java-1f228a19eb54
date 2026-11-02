@@ -451,6 +451,9 @@ public final class DOMReference extends DOMStructure
 	        } else {
 	            throw new XMLSignatureException("unrecognized Data type");
 	        }
+
+	        boolean secVal = Utils.secureValidation(context);
+	        xi.setSecureValidation(secVal);
 	        if (context instanceof XMLSignContext && c14n11
 		    && !xi.isOctetStream() && !xi.isOutputStreamSet()) {
 		    DOMTransform t = new DOMTransform

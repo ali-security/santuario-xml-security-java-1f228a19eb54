@@ -401,6 +401,9 @@ private Element digestValueElement;
          resolver.addProperties(this._manifest._resolverProperties);
 
          XMLSignatureInput input = resolver.resolve(URIAttr, this._baseURI);
+         if (input != null && this._manifest.isSecureValidation()) {
+            input.setSecureValidation(true);
+         }
                   
 
          return input;

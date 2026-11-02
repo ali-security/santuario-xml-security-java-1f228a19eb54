@@ -71,6 +71,12 @@ public class Manifest extends SignatureElementProxy {
    List _perManifestResolvers = null;
 
    /**
+    * If true, XML data parsed while processing the references must not
+    * contain a document type declaration (DTD).
+    */
+   private boolean secureValidation;
+
+   /**
     * Consturts {@link Manifest}
     *
     * @param doc the {@link Document} in which <code>XMLsignature</code> is placed
@@ -93,8 +99,24 @@ public class Manifest extends SignatureElementProxy {
     */
    public Manifest(Element element, String BaseURI)
            throws XMLSecurityException {
+      this(element, BaseURI, false);
+   }
+
+   /**
+    * Constructor Manifest
+    *
+    * @param element
+    * @param BaseURI
+    * @param secureValidation whether secure validation is enabled or not. If
+    * enabled, XML data parsed while processing the references must not 
+    * contain a document type declaration (DTD).
+    * @throws XMLSecurityException
+    */
+   public Manifest(Element element, String BaseURI, boolean secureValidation)
+           throws XMLSecurityException {
 
       super(element, BaseURI);
+      this.secureValidation = secureValidation;
 
       // check out Reference children
       this._referencesEl = XMLUtils.selectDsNodes(this._constructionElement.getFirstChild(),
@@ -333,7 +355,8 @@ public class Manifest extends SignatureElementProxy {
                         try {
                            referencedManifest =
                               new Manifest((Element) n,
-                                           signedManifestNodes.getSourceURI());
+                                           signedManifestNodes.getSourceURI(),
+                                           secureValidation);
 
                            break findManifest;
                         } catch (XMLSecurityException ex) {
@@ -553,5 +576,16 @@ public class Manifest extends SignatureElementProxy {
     */
    public String getBaseLocalName() {
       return Constants._TAG_MANIFEST;
+   }
+
+   /**
+    * Returns whether secure validation is enabled or not. If enabled, XML
+    * data parsed while processing the references must not contain a document
+    * type declaration (DTD).
+    *
+    * @return true if secure validation is enabled
+    */
+   public boolean isSecureValidation() {
+      return secureValidation;
    }
 }
