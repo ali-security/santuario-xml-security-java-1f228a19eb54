@@ -1,0 +1,155 @@
+# Build and test Apache XML Security for Java (Santuario) 1.4.3 with its own
+# Ant build.xml. Upstream had no GitHub Actions CI (CVS/SVN era, Ant build per
+# INSTALL: "To build the binaries and run all of the tests, run 'ant test'").
+#
+# Toolchain: the release was built with Ant 1.7.0 on Sun JDK 1.4.2_17
+# (see the published jar's MANIFEST). No JDK 1.4.2 Linux build is
+# downloadable without an Oracle login, so this uses the closest available
+# Sun JDK, 1.5.0_22 (amd64, from the archive.org mirror of Oracle's
+# installer, sha256-pinned) together with Ant 1.7.0. build.xml itself pins
+# javac source/target 1.4, so library classes are class-file version 48,
+# matching the published jar. JDK 5 has no built-in JSR 105, so the
+# javax.xml.crypto / org.jcp classes under test are this project's own.
+name: seal-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Space-separated fully-qualified JUnit test classes to run instead of the full suite"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      JDK_URL: https://archive.org/download/jdk-1_5_0_22-linux-i586/jdk-1_5_0_22-linux-amd64.bin
+      JDK_SHA256: 5383e5e28872a1c7e75e9df40d931797e8bef1e11d49f662492da2b75f7cc3c0
+      JCE_URL: https://archive.org/download/jdk-1_5_0_22-linux-i586/jce_policy-1_5_0.zip
+      JCE_SHA256: 4de78da737c6d66b74eb6caebf6bdb0648825a95e2909e815678a0d306bf6d8b
+      ANT_URL: https://archive.apache.org/dist/ant/binaries/apache-ant-1.7.0-bin.tar.gz
+      ANT_SHA256: c1de8b89c9bebaea978964f1cab92f5dd2a7e4d47850a5bb8db13434c3fcdcb6
+      JUNIT_URL: https://repo.maven.apache.org/maven2/junit/junit/3.8.1/junit-3.8.1.jar
+      JUNIT_SHA256: b58e459509e190bed737f3592bc1950485322846cf10e78ded1d065153012d70
+      RFC3161_URL: https://www.rfc-editor.org/rfc/rfc3161.txt
+      RFC3161_SHA256: 39fd17644ff2d654bc83814a78b1c5b5e7517f496741f34ead5064943eb98240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Sun JDK 1.5.0_22 + JCE unlimited strength policy
+        run: |
+          set -eu
+          dl="$RUNNER_TEMP/dl"; mkdir -p "$dl" "$RUNNER_TEMP/java"
+          curl -fsSL --retry 5 -o "$dl/jdk.bin" "$JDK_URL"
+          echo "$JDK_SHA256  $dl/jdk.bin" | sha256sum -c -
+          curl -fsSL --retry 5 -o "$dl/jce.zip" "$JCE_URL"
+          echo "$JCE_SHA256  $dl/jce.zip" | sha256sum -c -
+          cd "$RUNNER_TEMP/java"
+          # The self-extracting installer shows the licence and asks for "yes".
+          sh "$dl/jdk.bin" < <(yes yes) > "$dl/jdk-install.log" 2>&1
+          JAVA_HOME="$RUNNER_TEMP/java/jdk1.5.0_22"
+          # AES-192/256 encryption tests need the unlimited-strength policy files.
+          unzip -o -j "$dl/jce.zip" 'jce/*.jar' -d "$JAVA_HOME/jre/lib/security/"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+          "$JAVA_HOME/bin/java" -version
+
+      - name: Install Ant 1.7.0 and JUnit 3.8.1
+        run: |
+          set -eu
+          dl="$RUNNER_TEMP/dl"
+          curl -fsSL --retry 5 -o "$dl/ant.tgz" "$ANT_URL"
+          echo "$ANT_SHA256  $dl/ant.tgz" | sha256sum -c -
+          tar -xzf "$dl/ant.tgz" -C "$RUNNER_TEMP"
+          echo "ANT_HOME=$RUNNER_TEMP/apache-ant-1.7.0" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/apache-ant-1.7.0/bin" >> "$GITHUB_PATH"
+          # build.xml expects JUnit at libs/junit-3.8.1.jar (lib.junit).
+          curl -fsSL --retry 5 -o libs/junit-3.8.1.jar "$JUNIT_URL"
+          echo "$JUNIT_SHA256  libs/junit-3.8.1.jar" | sha256sum -c -
+
+      - name: Serve the interop vectors' external references offline
+        # The JSR 105 interop vectors (Baltimore merlin-18/23, Phaos) sign
+        # http://www.w3.org/TR/xml-stylesheet,
+        # http://www.w3.org/Signature/2002/04/xml-stylesheet.b64 and
+        # http://www.ietf.org/rfc/rfc3161.txt as fetched in 2002. Today those
+        # URLs redirect to https / serve different bytes, so the digests no
+        # longer match. Serve the original bytes (the copies this repo ships
+        # under data/, plus the immutable RFC 3161 text) from a local HTTP
+        # server so ResolverDirectHTTP / DOMURIDereferencer still do a real
+        # HTTP dereference.
+        run: |
+          set -eu
+          www="$RUNNER_TEMP/www"
+          mkdir -p "$www/TR" "$www/Signature/2002/04" "$www/rfc"
+          cp data/org/w3c/www/TR/xml-stylesheet.html "$www/TR/xml-stylesheet"
+          cp data/ie/baltimore/merlin-examples/merlin-xmldsig-twenty-three/xml-stylesheet.b64 "$www/Signature/2002/04/xml-stylesheet.b64"
+          curl -fsSL --retry 5 -o "$www/rfc/rfc3161.txt" "$RFC3161_URL"
+          echo "$RFC3161_SHA256  $www/rfc/rfc3161.txt" | sha256sum -c -
+          echo "127.0.0.1 www.w3.org www.ietf.org" | sudo tee -a /etc/hosts
+          sudo nohup python3 -m http.server 80 --bind 127.0.0.1 --directory "$www" > "$RUNNER_TEMP/http.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fs -o /dev/null http://www.w3.org/TR/xml-stylesheet; then break; fi
+            sleep 1
+          done
+          curl -fsS -o /dev/null -w "local w3.org: %{http_code}\n" http://www.w3.org/TR/xml-stylesheet
+
+      - name: Build jars (ant build.jar)
+        run: ant build.jar
+
+      - name: Test
+        run: |
+          set -eu
+          results="$RUNNER_TEMP/junit-results"
+          mkdir -p "$results"
+          if [ -n "${{ inputs.test-filter }}" ]; then
+            mkdir -p build/libs/endorsed
+            cp libs/xalan.jar libs/serializer.jar libs/xml-apis.jar libs/xercesImpl.jar build/libs/endorsed/
+            cp=build/classes:build/test
+            for j in libs/*.jar; do cp="$cp:$j"; done
+            for t in ${{ inputs.test-filter }}; do
+              java -Dbasedir="$PWD" -Djava.endorsed.dirs="$PWD/build/libs/endorsed" \
+                -cp "$cp" junit.textui.TestRunner "$t"
+            done
+          else
+            # Upstream's two JUnit targets: AllTests (Apache XMLSec API) and
+            # test_jsr105 (JSR 105 API + interop). test_jsr105 wipes the XML
+            # report dir, so keep each target's reports.
+            ant test
+            mkdir -p "$results/test" && cp build/docs/xml/junit/TEST-*.xml "$results/test/"
+            ant test_jsr105
+            mkdir -p "$results/test_jsr105" && cp build/docs/xml/junit/TEST-*.xml "$results/test_jsr105/"
+          fi
+
+      - name: Test summary
+        if: ${{ inputs.test-filter == '' }}
+        run: |
+          python3 - "$RUNNER_TEMP/junit-results" <<'EOF'
+          import glob, os, sys
+          import xml.etree.ElementTree as ET
+          root = sys.argv[1]
+          grand = [0, 0, 0]
+          for target in ("test", "test_jsr105"):
+              tot = [0, 0, 0]
+              files = sorted(glob.glob(os.path.join(root, target, "TEST-*.xml")))
+              for f in files:
+                  s = ET.parse(f).getroot()
+                  t, fa, er = int(s.get("tests")), int(s.get("failures")), int(s.get("errors"))
+                  print("%-14s %-70s tests=%4d failures=%d errors=%d" % (target, s.get("name"), t, fa, er))
+                  tot = [tot[0] + t, tot[1] + fa, tot[2] + er]
+              print("ant %s: %d suites, %d tests run, %d passed, %d failures, %d errors, 0 skipped"
+                    % (target, len(files), tot[0], tot[0] - tot[1] - tot[2], tot[1], tot[2]))
+              grand = [grand[i] + tot[i] for i in range(3)]
+          print("TOTAL: %d tests run, %d passed, %d failures, %d errors, 0 skipped"
+                % (grand[0], grand[0] - grand[1] - grand[2], grand[1], grand[2]))
+          sys.exit(1 if grand[1] or grand[2] or grand[0] == 0 else 0)
+          EOF
+
+      - name: Upload xmlsec jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmlsec-1.4.3
+          path: build/xmlsec-1.4.3.jar
+          if-no-files-found: error
