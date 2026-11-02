@@ -27,6 +27,7 @@ public class AllTests {
 		//$JUnit-BEGIN$
 		suite.addTest(TransformBase64DecodeTest.suite());
 		suite.addTest(TransformXSLTTest.suite());
+		suite.addTest(TransformXPathTest.suite());
 		suite.addTest(Xpath2TransformationTest.suite());
 		//$JUnit-END$
 		return suite;
